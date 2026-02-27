@@ -19,9 +19,13 @@ class SyncManager(private val context: Context) {
     suspend fun performSync(): Result<SyncResult> = withContext(Dispatchers.IO) {
         try {
             val webhookConfigs = preferencesManager.getWebhookConfigs()
+            val accessTokenResult = AuthSessionManager.getAccessTokenOrSignOut()
 
             if (webhookConfigs.isEmpty()) {
                 return@withContext Result.failure(Exception("No webhook URLs configured"))
+            }
+            if (accessTokenResult.isFailure) {
+                return@withContext Result.failure(accessTokenResult.exceptionOrNull() ?: Exception("Please sign in"))
             }
 
             val enabledTypes = preferencesManager.getEnabledDataTypes()
@@ -62,7 +66,8 @@ class SyncManager(private val context: Context) {
                 webhookConfigs = webhookConfigs,
                 context = context,
                 dataType = "all",
-                recordCount = totalRecords
+                recordCount = totalRecords,
+                accessToken = accessTokenResult.getOrThrow()
             )
 
             // Build JSON payload

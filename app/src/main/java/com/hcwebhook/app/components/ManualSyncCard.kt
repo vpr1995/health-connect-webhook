@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.HealthConnectClient
 import com.hcwebhook.app.HealthConnectManager
 import com.hcwebhook.app.PreferencesManager
+import com.hcwebhook.app.AuthSessionManager
 import com.hcwebhook.app.SyncManager
 import com.hcwebhook.app.SyncResult
 import kotlinx.coroutines.launch
@@ -25,6 +26,7 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
     var isSyncing by remember { mutableStateOf(false) }
     var syncMessage by remember { mutableStateOf<String?>(null) }
     var showConfirmSheet by remember { mutableStateOf(false) }
+    val authState by AuthSessionManager.authUiState.collectAsState()
     
     val webhookConfigs = preferencesManager.getWebhookConfigs()
 
@@ -127,11 +129,19 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
                 "Trigger a manual sync to send current health data to webhooks",
                 style = MaterialTheme.typography.bodyMedium
             )
+            if (!authState.isSignedIn) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Login is required before syncing data.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = { showConfirmSheet = true },
-                enabled = !isSyncing && webhookConfigs.isNotEmpty(),
+                enabled = !isSyncing && webhookConfigs.isNotEmpty() && authState.isSignedIn,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (isSyncing) {

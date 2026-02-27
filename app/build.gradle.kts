@@ -75,6 +75,8 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.amplify.core)
+    implementation(libs.amplify.auth.cognito)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

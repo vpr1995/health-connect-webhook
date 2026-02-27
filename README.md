@@ -48,6 +48,7 @@ Health Connect aggregates data from these popular health and fitness apps:
 - 📊 **Manual Sync** - Trigger immediate data synchronization on demand
 - 📝 **Webhook Logs** - View detailed logs of all webhook requests and responses
 - 🔐 **Permission Management** - Granular Health Connect permission handling
+- 🔑 **Cognito Login** - AWS Amplify + Cognito User Pool authentication with logout support
 - 🎨 **Modern UI** - Built with Jetpack Compose and Material 3 design
 - ⚡ **Real-time Status** - Visual indicators for permission status and sync state
 - 💬 **Feedback** - Easy access to provide feedback and suggestions through the app menu
@@ -143,12 +144,15 @@ The APK will be generated at: `app/build/outputs/apk/debug/app-debug.apk`
    - Grant the required permissions in Health Connect
 
 3. **Configure Webhooks**
-   - Add one or more webhook URLs (must start with `http://` or `https://`)
-   - Select which data types to sync
-   - Set your preferred sync interval (minimum 15 minutes)
+    - Add one or more webhook URLs (must start with `http://` or `https://`)
+    - Select which data types to sync
+    - Set your preferred sync interval (minimum 15 minutes)
+4. **Sign in**
+   - Add your `amplifyconfiguration.json` in `app/src/main/res/raw/`
+   - Login from the Home screen with your Cognito User Pool credentials
 
-4. **Save Configuration**
-   - Tap "Save Configuration" to start automatic syncing
+5. **Save Configuration**
+    - Tap "Save Configuration" to start automatic syncing
 
 ### Manual Sync
 
