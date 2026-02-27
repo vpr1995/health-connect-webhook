@@ -13,6 +13,8 @@ class HCWebhookApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         preferencesManager = PreferencesManager(this)
+        AuthSessionManager.initialize(this)
+        AuthSessionManager.refreshSessionInBackground()
 
         // Schedule syncs based on the selected sync mode
         when (preferencesManager.getSyncMode()) {

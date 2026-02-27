@@ -13,6 +13,7 @@ workManager = "2.9.0"
 okhttp = "4.12.0"
 kotlinxSerialization = "1.6.3"
 splashScreen = "1.0.1"
+amplifyAndroid = "2.16.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,9 +36,10 @@ androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx"
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashScreen" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+amplify-core = { group = "com.amplifyframework", name = "core", version.ref = "amplifyAndroid" }
+amplify-auth-cognito = { group = "com.amplifyframework", name = "aws-auth-cognito", version.ref = "amplifyAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import com.hcwebhook.app.*
+import com.hcwebhook.app.components.AuthCard
 import com.hcwebhook.app.ui.theme.*
 import android.content.Intent
 import android.net.Uri
@@ -170,6 +171,8 @@ fun ConfigurationScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            AuthCard()
+
             // Permissions Card
              if (sdkStatus != HealthConnectClient.SDK_AVAILABLE) {
                  Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {

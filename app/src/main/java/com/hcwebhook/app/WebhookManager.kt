@@ -14,7 +14,8 @@ class WebhookManager(
     private val webhookConfigs: List<WebhookConfig>,
     private val context: Context? = null,
     private val dataType: String? = null,
-    private val recordCount: Int? = null
+    private val recordCount: Int? = null,
+    private val accessToken: String? = null
 ) {
 
     private val client = OkHttpClient.Builder()
@@ -61,6 +62,7 @@ class WebhookManager(
             config.headers.forEach { (key, value) ->
                 requestBuilder.addHeader(key, value)
             }
+            buildAuthHeader(accessToken)?.let { requestBuilder.header("Authorization", it) }
             
             val request = requestBuilder.build()
 
@@ -74,6 +76,9 @@ class WebhookManager(
                         logWebhookCall(config.url, timestamp, statusCode, true, null)
                         return Result.success(Unit)
                     } else {
+                        if (response.code == 401 || response.code == 403) {
+                            AuthSessionManager.signOutInBackground()
+                        }
                         lastException = IOException("HTTP ${response.code}: ${response.message}")
                         errorMessage = "HTTP ${response.code}: ${response.message}"
                     }
@@ -124,5 +129,10 @@ class WebhookManager(
         private const val TIMEOUT_SECONDS = 10L
         private const val MAX_RETRIES = 3
         private const val INITIAL_RETRY_DELAY_MS = 1000L
+
+        internal fun buildAuthHeader(accessToken: String?): String? {
+            val token = accessToken?.trim().orEmpty()
+            return if (token.isEmpty()) null else "Bearer $token"
+        }
     }
 }
