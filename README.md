@@ -157,6 +157,7 @@ The APK will be generated at: `app/build/outputs/apk/debug/app-debug.apk`
 ### Manual Sync
 
 - Tap the "Sync Now" button in the Manual Sync section to immediately sync all enabled data types to your webhooks
+- Optionally choose a **From** and **To** date before syncing, or use the quick **Last 7 days** shortcut
 
 ### Viewing Logs
 

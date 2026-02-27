@@ -176,11 +176,16 @@ class HealthConnectManager(private val context: Context) {
 
     suspend fun readHealthData(
         enabledTypes: Set<HealthDataType>,
-        lastSyncTimestamps: Map<HealthDataType, Instant?>
+        lastSyncTimestamps: Map<HealthDataType, Instant?>,
+        fromTime: Instant? = null,
+        toTime: Instant? = null
     ): Result<HealthData> {
         return try {
-            val endTime = Instant.now()
-            val startTime = endTime.minus(LOOKBACK_HOURS, ChronoUnit.HOURS)
+            val defaultEndTime = Instant.now()
+            val endTime = toTime ?: defaultEndTime
+            val startTime = fromTime ?: endTime.minus(LOOKBACK_HOURS, ChronoUnit.HOURS)
+
+            require(!startTime.isAfter(endTime)) { "Invalid date range: from date must be before to date" }
 
             val stepsData = if (HealthDataType.STEPS in enabledTypes)
                 readStepsData(startTime, endTime, lastSyncTimestamps[HealthDataType.STEPS]) else emptyList()

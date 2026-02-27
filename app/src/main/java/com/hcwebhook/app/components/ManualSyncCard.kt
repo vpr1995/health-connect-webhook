@@ -1,6 +1,5 @@
 package com.hcwebhook.app.components
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +14,11 @@ import com.hcwebhook.app.AuthSessionManager
 import com.hcwebhook.app.SyncManager
 import com.hcwebhook.app.SyncResult
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,9 +30,53 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
     var isSyncing by remember { mutableStateOf(false) }
     var syncMessage by remember { mutableStateOf<String?>(null) }
     var showConfirmSheet by remember { mutableStateOf(false) }
+    var fromDateMillis by remember { mutableStateOf<Long?>(null) }
+    var toDateMillis by remember { mutableStateOf<Long?>(null) }
+    var showFromDatePicker by remember { mutableStateOf(false) }
+    var showToDatePicker by remember { mutableStateOf(false) }
     val authState by AuthSessionManager.authUiState.collectAsState()
     
     val webhookConfigs = preferencesManager.getWebhookConfigs()
+    val isDateRangeValid = fromDateMillis == null || toDateMillis == null || fromDateMillis!! <= toDateMillis!!
+    val syncDateRange = remember(fromDateMillis, toDateMillis) {
+        buildSyncDateRange(fromDateMillis, toDateMillis)
+    }
+
+    if (showFromDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = fromDateMillis)
+        DatePickerDialog(
+            onDismissRequest = { showFromDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    fromDateMillis = datePickerState.selectedDateMillis
+                    showFromDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFromDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showToDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = toDateMillis)
+        DatePickerDialog(
+            onDismissRequest = { showToDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    toDateMillis = datePickerState.selectedDateMillis
+                    showToDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showToDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     // ── Confirmation Bottom Sheet ──────────────────────────────────────────────
     if (showConfirmSheet) {
@@ -46,6 +94,11 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
                 Text(
                     "This will immediately send your health data to all configured webhooks.",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Range: ${formatDateLabel(fromDateMillis, "Default")} → ${formatDateLabel(toDateMillis, "Now")}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -78,7 +131,10 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
                                 }
 
                                 val syncManager = SyncManager(context)
-                                val result = syncManager.performSync()
+                                val result = syncManager.performSync(
+                                    fromTime = syncDateRange.first,
+                                    toTime = syncDateRange.second
+                                )
 
                                 when {
                                     result.isSuccess -> {
@@ -106,6 +162,7 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
                             }
                         }
                     },
+                    enabled = isDateRangeValid,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Sync Now")
@@ -129,6 +186,53 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
                 "Trigger a manual sync to send current health data to webhooks",
                 style = MaterialTheme.typography.bodyMedium
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "Optional date range",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { showFromDatePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("From: ${formatDateLabel(fromDateMillis, "Default")}")
+                }
+                OutlinedButton(
+                    onClick = { showToDatePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("To: ${formatDateLabel(toDateMillis, "Now")}")
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    onClick = {
+                        val todayMillis = LocalDate.now().toEpochDay() * MILLIS_PER_DAY
+                        toDateMillis = todayMillis
+                        fromDateMillis = todayMillis - (6 * MILLIS_PER_DAY)
+                    }
+                ) {
+                    Text("Last 7 days")
+                }
+                TextButton(
+                    onClick = {
+                        fromDateMillis = null
+                        toDateMillis = null
+                    }
+                ) {
+                    Text("Clear")
+                }
+            }
+            if (!isDateRangeValid) {
+                Text(
+                    "From date must be before To date.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             if (!authState.isSignedIn) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -141,7 +245,7 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
 
             Button(
                 onClick = { showConfirmSheet = true },
-                enabled = !isSyncing && webhookConfigs.isNotEmpty() && authState.isSignedIn,
+                enabled = !isSyncing && webhookConfigs.isNotEmpty() && authState.isSignedIn && isDateRangeValid,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (isSyncing) {
@@ -170,4 +274,24 @@ fun ManualSyncCard(onSyncCompleted: () -> Unit = {}) {
             }
         }
     }
+}
+
+internal const val MILLIS_PER_DAY = 86_400_000L
+internal val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+internal fun formatDateLabel(dateMillis: Long?, fallback: String): String {
+    if (dateMillis == null) return fallback
+    val localDate = Instant.ofEpochMilli(dateMillis).atZone(ZoneOffset.UTC).toLocalDate()
+    return DATE_FORMATTER.format(localDate)
+}
+
+internal fun buildSyncDateRange(fromDateMillis: Long?, toDateMillis: Long?): Pair<Instant?, Instant?> {
+    val zone = ZoneId.systemDefault()
+    val from = fromDateMillis?.let {
+        Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().atStartOfDay(zone).toInstant()
+    }
+    val to = toDateMillis?.let {
+        Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
+    }
+    return from to to
 }
