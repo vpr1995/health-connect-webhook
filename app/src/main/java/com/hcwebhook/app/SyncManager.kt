@@ -16,7 +16,10 @@ class SyncManager(private val context: Context) {
     private val preferencesManager = PreferencesManager(context)
     private val healthConnectManager = HealthConnectManager(context)
 
-    suspend fun performSync(): Result<SyncResult> = withContext(Dispatchers.IO) {
+    suspend fun performSync(
+        fromTime: Instant? = null,
+        toTime: Instant? = null
+    ): Result<SyncResult> = withContext(Dispatchers.IO) {
         try {
             val webhookConfigs = preferencesManager.getWebhookConfigs()
             val accessTokenResult = AuthSessionManager.getAccessTokenOrSignOut()
@@ -33,13 +36,26 @@ class SyncManager(private val context: Context) {
                 return@withContext Result.failure(Exception("No data types enabled"))
             }
 
-            // Get last sync timestamps for all enabled types
-            val lastSyncTimestamps = enabledTypes.associateWith { type ->
-                preferencesManager.getLastSyncTimestamp(type)?.let { Instant.ofEpochMilli(it) }
+            if (fromTime != null && toTime != null && fromTime.isAfter(toTime)) {
+                return@withContext Result.failure(Exception("From date must be before to date"))
+            }
+
+            // For manual date-range sync, bypass incremental last-sync filtering.
+            val lastSyncTimestamps = if (fromTime != null || toTime != null) {
+                enabledTypes.associateWith { null }
+            } else {
+                enabledTypes.associateWith { type ->
+                    preferencesManager.getLastSyncTimestamp(type)?.let { Instant.ofEpochMilli(it) }
+                }
             }
 
             // Read health data
-            val healthDataResult = healthConnectManager.readHealthData(enabledTypes, lastSyncTimestamps)
+            val healthDataResult = healthConnectManager.readHealthData(
+                enabledTypes = enabledTypes,
+                lastSyncTimestamps = lastSyncTimestamps,
+                fromTime = fromTime,
+                toTime = toTime
+            )
             if (healthDataResult.isFailure) {
                 return@withContext Result.failure(healthDataResult.exceptionOrNull() ?: Exception("Failed to read health data"))
             }
