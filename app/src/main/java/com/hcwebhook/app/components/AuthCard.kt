@@ -78,7 +78,7 @@ fun AuthCard() {
             } else {
                 OutlinedTextField(
                     value = username,
-                    onValueChange = { username = it.trim() },
+                    onValueChange = { username = it },
                     label = { Text("Username") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -95,7 +95,7 @@ fun AuthCard() {
                     onClick = {
                         scope.launch {
                             isLoading = true
-                            val result = AuthSessionManager.signIn(username, password)
+                            val result = AuthSessionManager.signIn(username.trim(), password)
                             if (result.isFailure) {
                                 Toast.makeText(
                                     context,

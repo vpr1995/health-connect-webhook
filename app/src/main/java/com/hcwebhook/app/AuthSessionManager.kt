@@ -1,6 +1,7 @@
 package com.hcwebhook.app
 
 import android.content.Context
+import android.util.Log
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.auth.AuthUser
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
@@ -25,6 +26,7 @@ data class AuthUiState(
 )
 
 object AuthSessionManager {
+    private const val TAG = "AuthSessionManager"
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _authUiState = MutableStateFlow(AuthUiState())
     val authUiState: StateFlow<AuthUiState> = _authUiState.asStateFlow()
@@ -37,7 +39,8 @@ object AuthSessionManager {
             Amplify.configure(context.applicationContext)
             isAmplifyInitialized = true
             _authUiState.value = _authUiState.value.copy(isConfigured = true, statusMessage = null)
-        } catch (_: AmplifyException) {
+        } catch (error: AmplifyException) {
+            Log.w(TAG, "Amplify auth initialization failed", error)
             _authUiState.value = _authUiState.value.copy(
                 isConfigured = false,
                 statusMessage = "Auth not configured. Add amplifyconfiguration.json."
@@ -59,7 +62,7 @@ object AuthSessionManager {
         Amplify.Auth.fetchAuthSession(
             { session ->
                 val isSignedIn = session.isSignedIn
-                val user = if (isSignedIn) runCatching<AuthUser?> { Amplify.Auth.currentUser }.getOrNull() else null
+                val user = if (isSignedIn) runCatching { Amplify.Auth.currentUser }.getOrNull() else null
                 _authUiState.value = _authUiState.value.copy(
                     isConfigured = true,
                     isSignedIn = isSignedIn,
